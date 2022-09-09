@@ -1,0 +1,13 @@
+digraph world {
+	graph [rankdir=LR]
+	node [margin=0 shape=plaintext]
+	world [label=world fontsize=30]
+	"hello-bwd-hello" [label=hello fontsize=30]
+	"hello-bwd-hello" -> world
+	"is-fwd-is" [label=is fontsize=30]
+	"my-fwd-is-my" [label=my fontsize=30]
+	"oyster-fwd-is-my-oyster" [label=oyster fontsize=30]
+	"my-fwd-is-my" -> "oyster-fwd-is-my-oyster"
+	"is-fwd-is" -> "my-fwd-is-my"
+	world -> "is-fwd-is"
+}
