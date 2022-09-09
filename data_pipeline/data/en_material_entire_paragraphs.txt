@@ -1,0 +1,71 @@
+The article gives an overview of the sentence alignment process and how to build them using a scalable pipeline. We also talk about the challenges faced as part of the Project Anuvaad (an Indic based translation system) in performing alignment at scale and how it was optimized using FAISS for considerable performance improvement in curating the bi-lingual corpus. We are one of the biggest contributors to India’s largest publicly available parallel corpus samanantar. We will also be the early contributors to the ULCA ( Universal Language Contribution API ) system.
+Bilingual Sentence Alignment
+Bilingual Sentence alignment (or cross-language semantic similarity) is defined as searching through two available collections of sentences and identifying meaningfully matching sentence pairs (if any) among them.
+First, to get a detailed idea about the whole process, let’s start from the basics. Consider two lists, having similar (but not exactly matching) sentences.
+The idea behind aligner is to identify cases like “My name is Aswin” and “Aswin, thats my name” are both similar.
+Even Though the problem seems complex at the first glance, there are numerous methods available for achieving this. Basic methods like Fuzzywuzzy, Word2vec, TF-IDF, etc could be used to achieve the same. Extracting out quality pairs in complex inputs is a bit tricky though, which we will discuss later. However, the idea here is to establish the fact that it’s relatively simple to do it if the language pair is English-English. One can refer to this article to understand varied approaches in detail here.
+The code below explains a simple approach to find matching pairs if language is en-en.
+Even if such simple approaches work out in basic situations, we cannot expect it to provide ideal output in complex and ambiguous cases. Therefore, we need to switch to a model-based approach. Also since we aim to do the alignment for bilingual texts, now let’s think in that context from now on, since the same approach could be applied for the monolingual cases as well.
+In order to achieve this, we make use of pre-trained encoder-decoder models that transform these sentences into vector representations, these vector representations (known as embeddings) are then used to calculate the similarity between the sentences. On further search, we shortlisted two models, LASER (from Facebook) and LaBSE (from Google). In this article, Vishal Mahuli explains the comparison between both of them. Since LaBSE gave considerably better outputs for Indic languages, it was used as part of the Anuvaad project (https://anuvaad.org/).
+Basic Implementation
+Generate vector embeddings for all the sentences for source and target languages sentences with LaBSE. Calculate the cosine distances between each of these sentence pairs and the couple that has the largest cosine similarity will be considered to be a pair.
+This is a basic approach using the wrapper library polyfuzz which calculates BERT embeddings and does matching based on it. The output looks as below.
+No alt text provided for this image
+
+We tried the same manually without polyfuzz and fine-tuned the approach and threshold using various parameters and implemented the same idea in a slightly different manner, which could be found here.
+All Done?
+Problem solved and we started getting meaningful pairs using LaBSE across various Indian languages. However, the system took a performance hit and processing time was increasing exponentially with input data. It even used to take days when the input sentences count was exceeding 100K.
+This led to a way to fine-tune the alignment without compromising on the quality of the output.
+Initially, basic approaches were tried out, like saving the model to local and loading it and using it again and again, running embedding calculations on GPU, etc.
+By switching to GPU, the time for vectorization using LaBSE showed notable differences, however, cosine similarity calculation and the brute force matching approach were still time-consuming. Noted timings are tabulated towards the end of the document. Overall timings were reduced to half, however, it was still sluggish and time increased exponentially when dataset size increases.
+Then we searched upon and experimented with a wide range of approaches for efficient similarity search between vectors and landed up in KNN and FAISS.
+K Nearest Neighbour
+KNN works by finding the distances between a query and all the examples in the data, selecting the specified number of examples (K) closest to the query, then votes for the most frequent label (in the case of classification) or averages the labels (in the case of regression). KNN could be used for efficient searching as well.
+KNN Algorithm
+1. Load the data
+2. Initialize K to your chosen number of neighbours
+3. For each example in the data
+Calculate the distance between the query example and the current example from the data.
+Add the distance and the index of the example to an ordered collection.
+4. Sort the ordered collection of distances and indices in ascending order by the distances.
+5. Pick the first K entries from the sorted collection
+6. Get the labels of the selected K entries
+7. Perform Regression/Classification if needed
+Here, we use KNN not for any prediction, but just for similarity searching. There are different ways of calculating distance, and one way might be preferable depending on the problem we are solving. The major drawback of KNN is that The algorithm gets significantly slower as the number of input samples increases. That’s where FAISS comes into the picture.
+FAISS
+FAISS (Facebook AI Similarity Search) is a library developed by Facebook for efficient similarity search and clustering of dense vectors. FAISS is written in C++ with complete wrappers for Python/numpy. It contains algorithms that search in sets of vectors of any size, up to ones that possibly do not fit in RAM. Some of the most useful algorithms are implemented on the GPU to add up to the performance.
+FAISS is built around an index type that stores a set of vectors and provides a function to search in them with L2 and/or dot product vector comparison. Some index types are simple baselines, such as exact search.
+FAISS is tuned such that it vastly narrows down the search space for a vector’s k-nearest neighbors to have a much faster similarity search between vectors as compared to existing libraries like Scikit Learn. This technique is called Approximate Nearest Neighbours (ANN) search and sacrifices some precision to obtain vast speedups.
+Initial Preparation
+We have been doing several experiments with FAISS and various indexes within it. However, the following are some preparatory steps that are common for all. A model is initialized and embeddings are encoded based on it. These embeddings are passed to the KNN function, which returns the similarity score and corresponding list index based on which matched dataset could be recreated.
+No alt text provided for this image
+FAISS Indexes
+FAISS is built around the Index object. It encapsulates the set of database vectors and optionally preprocesses them to make searching efficient. There are many types of indexes.
+Flat indexes just encode the vectors into codes of a fixed size and store them in an array of ntotal * code_size bytes. At search time, all the indexed vectors are decoded sequentially and compared to the query vectors. In Flat Indexing (IndexFlat): the vectors are stored without compression.
+Another class of indexes in FAISS are partition-based indexes that speed up searches by partitioning the index into clusters and limiting the search to only a few clusters. This method however is not exact as there is no guarantee that the nearest neighbors will be in the clusters searched in. An example of an index that uses partitioning techniques to make the search space a lot less and far more efficient is IndexIVFFlat index.
+The search operation can be carried out in the same way as earlier indexes. However, in the IVFFlat index we define the “nprobe” hyperparameter to limit the search to only the defined number of clusters nearest to the query vector. This is also an example of how different indexes can be compounded to form a single index.
+Given below is a tabular representation of indexes we have tried out
+Experiment 1 : ANN
+Since speed was the major trade-off with the basic implementation, our initial approach was to try out the method which offers the best performance in terms of execution speed.
+A typical way to speed up the process at the cost of losing the guarantee to find the nearest neighbor is to employ a partitioning technique such as k-means. The corresponding algorithms are sometimes referred to as cell-probe methods.
+We use a partition-based method based on Multi-probing.
+The feature space is partitioned into nlist cells.
+The database vectors are assigned to one of these cells using a quantization function (in the case of k-means, the assignment to the centroid closest to the query), and stored in an inverted file structure formed of nlist inverted lists.
+At query time, a set of nprobe inverted lists is selected
+The query is compared to each of the database vectors assigned to these lists.
+Doing so, only a fraction of the database is compared to the query: as a first approximation, this fraction is nprobe/nlist, but this approximation is usually under-estimated because the inverted lists have not equal lengths. The failure case appears when the cell of the nearest neighbor of a given query is not selected.
+The constructor takes an index as a parameter (the quantizer or coarse quantizer), which is used to do the assignment to the inverted lists. The query is searched in this index, and the returned vector id(s) are the inverted list(s) that should be visited.
+No alt text provided for this image
+Takeaway
+Superfast execution.
+Output is decent enough but not good quality for parallel corpus dataset creation.
+Basic implementation gave better results regardless of speed.
+Experiment 2 : Cosine Similarity Measurement
+Since the initial basic implementation based on cosine similarity gave far better quality output than that of the ANN based approach, the very next thought is to give it a try with that. In FAISS we don’t have a cosine similarity method but have indexes that calculate the inner or dot product between vectors. We can then take advantage of the fact that cosine similarity is simply the dot product between normalized vectors.
+The code snippet below shows how this can be implemented.
+No alt text provided for this image
+Takeaway
+As expected, the search is a bit slower than the previous method.
+Quality of output increased but still not up to the mark.
+Quality decreases considerably as and when the threshold decreases.
+Basic implementation still gave better output.
