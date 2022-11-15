@@ -1,12 +1,12 @@
 import sys
-sys.path.insert(0, 'c:\\Users\\zhouy217\\OneDrive - Pfizer\\Documents\\data_pipeline\\app')
+sys.path.insert(0, 'c:\\Users\\Documents\\data_pipeline\\app')
  
 import text_mining_preprocess_0712
 import utils as U
 from text_mining_statistics import Statictics
 
 def create_ja_cooccurrence_network():
-    ja_df=text_mining_preprocess_0712.read_file_as_dataframe("c:\\Users\\zhouy217\\OneDrive - Pfizer\\Documents\\data_pipeline\\data\\ja_slide9_data.xlsx",col_list=[15],name_list=['sentence'],file_header='infer')
+    ja_df=text_mining_preprocess_0712.read_file_as_dataframe("c:\\Users\\Documents\\data_pipeline\\data\\ja_slide9_data.xlsx",col_list=[15],name_list=['sentence'],file_header='infer')
     ja_text_mining=text_mining_preprocess_0712.TextMiningPreprocess(ja_df)
     ja_SentenceList=ja_text_mining.create_SentenceList()
     ja_WordList_in_SentenceList=ja_text_mining.japanese_text_cleaning()
