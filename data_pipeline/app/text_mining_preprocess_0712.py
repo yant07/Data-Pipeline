@@ -14,7 +14,7 @@ import string
 from autocorrect import Speller
 from collections import Counter
 import jieba
-jieba.load_userdict("c:\\Users\\zhouy217\\OneDrive - Pfizer\\Documents\\data_pipeline\\app\\jiebaDict.txt")
+jieba.load_userdict("c:\\Users\\zhouy217\\OneDrive -  \\Documents\\data_pipeline\\app\\jiebaDict.txt")
 import nltk
 # nltk.download('wordnet')
 # nltk.download('omw-1.4')
@@ -304,7 +304,7 @@ class TextMiningPreprocess():
             stopword 选用的是哈工大停用词表，下载链接https://github.com/baipengyan/Chinese-StopWords
             '''
             s=set()
-            with open('c:\\Users\\zhouy217\\OneDrive - Pfizer\\Documents\\data_pipeline\\app\\StopwordsList.txt','r',encoding='UTF-8') as f:
+            with open('c:\\Users\\zhouy217\\OneDrive -  \\Documents\\data_pipeline\\app\\StopwordsList.txt','r',encoding='UTF-8') as f:
                 for line in f:
                     s.add(line.strip())
             return s
