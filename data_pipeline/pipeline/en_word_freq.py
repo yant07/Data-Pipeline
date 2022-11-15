@@ -1,12 +1,12 @@
 import sys
-sys.path.insert(0, 'c:\\Users\\zhouy217\\OneDrive - Pfizer\\Documents\\data_pipeline\\app')
+sys.path.insert(0, 'c:\\Users\\Documents\\data_pipeline\\app')
 
 import utils as U
 import text_mining_preprocess_0712
 from text_mining_statistics import Statictics
 
 def create_en_word_freq():
-    en_df=text_mining_preprocess_0712.read_file_as_dataframe("c:\\Users\\zhouy217\\OneDrive - Pfizer\\Documents\\data_pipeline\\data\\en_test.xlsx",col_list=[0],name_list=['sentence'],file_header=None)
+    en_df=text_mining_preprocess_0712.read_file_as_dataframe("c:\\Users\\Documents\\data_pipeline\\data\\en_test.xlsx",col_list=[0],name_list=['sentence'],file_header=None)
     en_text_mining=text_mining_preprocess_0712.TextMiningPreprocess(en_df)
     en_SentenceList=en_text_mining.create_SentenceList()
     en_WordList_in_SentenceList=en_text_mining.english_text_cleaning()
