@@ -286,7 +286,7 @@ class Statictics():
         if ifmask=='no':
             cloud_mask = None
         elif ifmask=='yes':
-            cloud_mask = np.array(Image.open(path.join(d, "c:\\Users\\zhouy217\\OneDrive - Pfizer\\Documents\\data_pipeline\\app\\cloud.png")))
+            cloud_mask = np.array(Image.open(path.join(d, "c:\\Users\\zhouy217\\OneDrive -  \\Documents\\data_pipeline\\app\\cloud.png")))
         wc = WordCloud(max_words=2000,
                     max_font_size=40,
                     font_path='./fonts/simhei.ttf',
